@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ETA 2824-2 · Full Overhaul Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;500;600;700&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0e0e0e;--surface:#161616;--card:#1c1c1c;--card2:#222;
+  --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.1);
+  --ink:#f0ede8;--muted:#606060;--text:#a0a0a0;
+  --amber:#e8a020;--amber-light:#f8c040;--amber-dim:rgba(232,160,32,.1);
+  --cyan:#20c8d8;--cyan-dim:rgba(32,200,216,.1);
+  --red:#d04040;--red-dim:rgba(208,64,64,.1);
+  --green:#40b860;--green-dim:rgba(64,184,96,.1);
+  --blue:#4080d0;--blue-dim:rgba(64,128,208,.1);
+  --violet:#9060d0;--violet-dim:rgba(144,96,208,.1);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;}
+body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;font-weight:300;line-height:1.65;}
+
+.app{display:grid;grid-template-columns:260px 1fr;height:100vh;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;overflow-y:auto;}
+.sb-brand{padding:20px 20px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.sb-cal{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--amber);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px;}
+.sb-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:600;color:var(--ink);line-height:1.1;}
+.sb-specs{margin-top:8px;}
+.sb-spec{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);display:flex;justify-content:space-between;padding:2px 0;}
+.sb-spec span{color:var(--text);}
+.sb-nav{flex:1;padding:8px 0;}
+.sb-section{padding:8px 20px 3px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;}
+.sb-item{display:flex;align-items:center;gap:8px;padding:8px 20px;cursor:pointer;transition:all .15s;border-left:2px solid transparent;font-size:12.5px;color:var(--muted);user-select:none;}
+.sb-item:hover{color:var(--text);background:rgba(255,255,255,.025);}
+.sb-item.active{color:var(--amber);border-left-color:var(--amber);background:var(--amber-dim);}
+.sb-item.done{color:var(--green);}
+.sb-item.done.active{color:var(--amber);}
+.step-num{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);min-width:18px;flex-shrink:0;}
+.sb-item.active .step-num{color:var(--amber);}
+.sb-item.done .step-num{color:var(--green);}
+.sb-check{width:13px;height:13px;border-radius:50%;border:1px solid var(--muted);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:7px;margin-left:auto;}
+.sb-item.done .sb-check{background:var(--green);border-color:var(--green);color:#0e0e0e;}
+.sb-progress{padding:14px 20px;border-top:1px solid var(--border);flex-shrink:0;}
+.prog-label{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:5px;}
+.prog-bar{height:2px;background:rgba(255,255,255,.05);border-radius:2px;}
+.prog-fill{height:100%;background:var(--amber);border-radius:2px;transition:width .5s cubic-bezier(.34,1.2,.64,1);}
+.prog-pct{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--amber);margin-top:4px;}
+
+/* MAIN */
+.main{height:100vh;overflow-y:auto;}
+.panel{display:none;padding:36px 40px 80px;max-width:900px;}
+.panel.active{display:block;}
+
+/* MOBILE */
+.mob-bar{display:none;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 18px;position:sticky;top:0;z-index:50;align-items:center;justify-content:space-between;}
+.mob-toggle{background:none;border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:3px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;}
+@media(max-width:800px){
+  .app{grid-template-columns:1fr;height:auto;overflow:visible;}
+  .sidebar{display:none;height:auto;position:relative;}
+  .sidebar.open{display:flex;}
+  .main{height:auto;overflow-y:visible;}
+  .mob-bar{display:flex;}
+  .panel{padding:24px 20px 60px;}
+}
+
+/* PANEL HEADER */
+.ph{margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);}
+.ph-tag{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:4px;color:var(--amber);text-transform:uppercase;margin-bottom:8px;}
+.ph h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(26px,4vw,46px);font-weight:600;color:var(--ink);line-height:1.05;letter-spacing:-.5px;}
+.ph p{font-size:13.5px;color:var(--muted);margin-top:8px;max-width:640px;line-height:1.65;}
+.ph-warn{display:flex;gap:10px;margin-top:14px;background:rgba(232,160,32,.08);border:1px solid rgba(232,160,32,.2);border-radius:5px;padding:10px 14px;font-size:13px;color:var(--text);}
+.ph-warn .wi{color:var(--amber);flex-shrink:0;font-size:15px;margin-top:1px;}
+
+/* SECTION DIVIDER */
+.sdiv{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--amber);text-transform:uppercase;margin:22px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+
+/* SPEC GRID */
+.spec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:14px 0;}
+.spec-card{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:12px 14px;}
+.sc-label{font-family:'Share Tech Mono',monospace;font-size:8.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+.sc-val{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:600;color:var(--amber);line-height:1;letter-spacing:-.5px;}
+.sc-unit{font-size:11px;color:var(--muted);margin-top:3px;}
+
+/* INFO CARDS */
+.info-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;}
+@media(max-width:560px){.info-row{grid-template-columns:1fr;}}
+.info-card{background:var(--card);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.ic-head{padding:8px 14px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;font-weight:600;}
+.ich-amber{background:var(--amber);color:#0e0e0e;}
+.ich-red{background:var(--red);color:#fff;}
+.ich-green{background:var(--green);color:#0e0e0e;}
+.ich-cyan{background:var(--cyan);color:#0e0e0e;}
+.ich-violet{background:var(--violet);color:#fff;}
+.ich-blue{background:var(--blue);color:#fff;}
+.ic-body{padding:14px;font-size:13px;color:var(--muted);line-height:1.65;}
+.ic-body strong{color:var(--text);}
+
+/* PARTS GRID */
+.parts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:7px;margin:12px 0;}
+.part-card{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:9px 11px;}
+.pc-num{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--amber);}
+.pc-pos{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--muted);}
+.pc-name{font-size:11.5px;color:var(--text);margin-top:3px;line-height:1.35;}
+
+/* TORQUE TABLE */
+.torque-block{background:var(--card);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin:12px 0;}
+.tb-head{padding:9px 16px;background:rgba(255,255,255,.03);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--amber);text-transform:uppercase;}
+.torque-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 16px;border-top:1px solid var(--border);gap:12px;}
+.tr-label{font-size:12.5px;color:var(--text);flex:1;}
+.tr-sub{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);display:block;margin-top:2px;}
+.tr-val{font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--amber);flex-shrink:0;}
+.tr-ml{font-size:9px;color:var(--muted);}
+
+/* STEP LIST */
+.step-list{display:flex;flex-direction:column;gap:7px;margin:14px 0;}
+.step-item{display:flex;gap:11px;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:13px 15px;cursor:pointer;transition:all .2s;align-items:flex-start;}
+.step-item:hover{border-color:var(--border2);}
+.step-item.done{border-color:rgba(64,184,96,.25);background:rgba(64,184,96,.04);}
+.si-check{width:19px;height:19px;border-radius:50%;border:1.5px solid var(--muted);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:9px;transition:all .2s;}
+.step-item.done .si-check{background:var(--green);border-color:var(--green);color:#0e0e0e;}
+.si-num{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);min-width:26px;margin-top:2px;flex-shrink:0;}
+.step-item.done .si-num{color:var(--green);}
+.si-title{font-size:13.5px;color:var(--ink);font-weight:400;margin-bottom:2px;line-height:1.3;}
+.step-item.done .si-title{color:var(--green);}
+.si-detail{font-size:12px;color:var(--muted);line-height:1.6;margin-top:4px;}
+.si-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;}
+.tag{display:inline-block;font-family:'Share Tech Mono',monospace;font-size:8.5px;padding:2px 7px;border-radius:3px;letter-spacing:.5px;font-weight:600;}
+.tag-warn{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(232,160,32,.25);}
+.tag-crit{background:var(--red-dim);color:var(--red);border:1px solid rgba(208,64,64,.2);}
+.tag-tip{background:var(--cyan-dim);color:var(--cyan);border:1px solid rgba(32,200,216,.2);}
+.tag-lube{background:var(--violet-dim);color:var(--violet);border:1px solid rgba(144,96,208,.2);}
+
+/* CALLOUT */
+.callout{border-left:2px solid var(--amber);padding:10px 15px;background:var(--amber-dim);border-radius:0 5px 5px 0;margin:10px 0;font-size:13px;color:var(--text);}
+.callout.red{border-color:var(--red);background:var(--red-dim);}
+.callout.green{border-color:var(--green);background:var(--green-dim);}
+.callout.cyan{border-color:var(--cyan);background:var(--cyan-dim);}
+.callout strong{color:var(--ink);}
+
+/* ASSEMBLY FLOW */
+.asm-flow{display:flex;flex-wrap:wrap;gap:5px;margin:12px 0;align-items:center;}
+.asm-node{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:5px 9px;font-family:'Share Tech Mono',monospace;font-size:9.5px;color:var(--text);white-space:nowrap;}
+.asm-node.key{border-color:rgba(232,160,32,.4);color:var(--amber);background:var(--amber-dim);}
+.asm-arrow{color:var(--muted);font-size:11px;}
+
+/* LUBE TABLE */
+.lube-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12px;}
+.lube-table th{background:rgba(255,255,255,.03);font-family:'Share Tech Mono',monospace;font-size:8.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);}
+.lube-table td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:top;}
+.lube-table tr:last-child td{border-bottom:none;}
+.lube-table tr:hover td{background:rgba(255,255,255,.015);}
+.lube-table td:first-child{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);}
+.lp{display:inline-block;padding:2px 7px;border-radius:3px;font-family:'Share Tech Mono',monospace;font-size:9px;font-weight:600;white-space:nowrap;}
+.lp-fine{background:var(--cyan-dim);color:var(--cyan);}
+.lp-thick{background:var(--violet-dim);color:var(--violet);}
+.lp-pallet{background:var(--amber-dim);color:var(--amber);}
+.lp-grease{background:var(--green-dim);color:var(--green);}
+
+/* HAND TABLE */
+.hf-wrap{overflow-x:auto;margin:12px 0;}
+.hf-table{width:100%;border-collapse:collapse;font-size:11.5px;min-width:600px;}
+.hf-table th{background:rgba(255,255,255,.04);font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:8px;text-align:center;border:1px solid var(--border);}
+.hf-table td{padding:8px;border:1px solid var(--border);text-align:center;color:var(--text);}
+.hf-table td:first-child{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--amber);}
+.hf-table tr:hover td{background:rgba(255,255,255,.02);}
+.hf-hl{background:rgba(232,160,32,.07)!important;}
+.hf-hl td{color:var(--amber-light)!important;}
+
+/* MARK DONE BTN */
+.mark-done-btn{margin-top:20px;padding:9px 22px;background:var(--amber);color:#0e0e0e;border:none;border-radius:5px;font-family:'Share Tech Mono',monospace;font-size:9.5px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;font-weight:600;}
+.mark-done-btn:hover{background:var(--amber-light);}
+.mark-done-btn.done{background:var(--green);color:#0e0e0e;}
+</style>
+</head>
+<body>
+
+<!-- MOBILE BAR -->
+<div class="mob-bar">
+  <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--amber);">ETA 2824-2 · OVERHAUL</div>
+  <button class="mob-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰ SECTIONS</button>
+</div>
+
+<div class="app">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-cal">ETA 2824-2</div>
+    <div class="sb-title">Full Overhaul<br>Service Guide</div>
+    <div class="sb-specs" style="margin-top:10px;">
+      <div class="sb-spec">Ø<span>25.60 mm</span></div>
+      <div class="sb-spec">Height<span>4.60 mm</span></div>
+      <div class="sb-spec">Jewels<span>25</span></div>
+      <div class="sb-spec">Freq<span>28,800 A/h</span></div>
+      <div class="sb-spec">Reserve<span>38 h</span></div>
+      <div class="sb-spec">Lift angle<span>50°</span></div>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-section">Overview</div>
+    <div class="sb-item active" onclick="nav(this,'p0')"><span class="step-num">00</span>Movement Overview<span class="sb-check"></span></div>
+
+    <div class="sb-section">Disassembly</div>
+    <div class="sb-item" onclick="nav(this,'p1')"><span class="step-num">01</span>Pre-Service Inspection<span class="sb-check"></span></div>
+    <div class="sb-item" onclick="nav(this,'p2')"><span class="step-num">02</span>Case & Hands<span class="sb-check"></span></div>
+    <div class="sb-item" onclick="nav(this,'p3')"><span class="step-num">03</span>Dial & Keyless Work<span class="sb-check"></span></div>
+    <div class="sb-item" onclick="nav(this,'p4')"><span class="step-num">04</span>Auto Module<span class="sb-check"></span></div>
+    <div class="sb-item" onclick="nav(this,'p5')"><span class="step-num">05</span>Balance & Escapement<span class="sb-check"></span></div>
+    <div class="sb-item" onclick="nav(this,'p6')"><span class="step-num">06</span>Train & Barrel<span class="sb-check"></span></div>
+
+    <div class="sb-section">Cleaning</div>
+    <div class="sb-item" onclick="nav(this,'p7')"><span class="step-num">07</span>Cleaning<span class="sb-check"></span></div>
+
+    <div class="sb-section">Reassembly</div>
+    <div class="sb-item" onclick="nav(this,'p8')"><span class="step-num">08</span>Barrel & Mainspring<span class="sb-check"></span></div>
+    <div class="sb-item" onclick="nav(this,'p9')"><span class="step-num">09</span>Train Assembly<span class="sb-check"></span></div>
+    <div class="sb-item" onclick="nav(this,'p10')"><span class="step-num">10</span>Winding Mechanism<span class="sb-check"></span></div>
+    <div class="sb-item" onclick="nav(this,'p11')"><span class="step-num">11</span>Pallet & Balance<span class="sb-check"></span></div>
+    <div class="sb-item" onclick="nav(this,'p12')"><span class="step-num">12</span>Auto Module Rebuild<span class="sb-check"></span></div>
+    <div class="sb-item" onclick="nav(this,'p13')"><span class="step-num">13</span>Calendar Mechanism<span class="sb-check"></span></div>
+    <div class="sb-item" onclick="nav(this,'p14')"><span class="step-num">14</span>Keyless Work & Dial<span class="sb-check"></span></div>
+
+    <div class="sb-section">Reference</div>
+    <div class="sb-item" onclick="nav(this,'p15')"><span class="step-num">15</span>Lubrication Reference<span class="sb-check"></span></div>
+    <div class="sb-item" onclick="nav(this,'p16')"><span class="step-num">16</span>Hand Fitting Heights<span class="sb-check"></span></div>
+
+    <div class="sb-section">Final</div>
+    <div class="sb-item" onclick="nav(this,'p17')"><span class="step-num">17</span>Final QC Checks<span class="sb-check"></span></div>
+  </nav>
+  <div class="sb-progress">
+    <div class="prog-label">Progress</div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    <div class="prog-pct" id="progPct">0 / 17 complete</div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+
+<!-- 00 OVERVIEW -->
+<div class="panel active" id="p0">
+  <div class="ph">
+    <div class="ph-tag">ETA 2824-2 · Introduction</div>
+    <h1>Movement Overview</h1>
+    <p>Complete professional overhaul guide based on official ETA Technical Communication CT 2824-2 FDE 481688 (Version 11, 01.09.2010). Work through each section in order — mark sections complete as you go.</p>
+    <div class="ph-warn"><span class="wi">⚠</span>Repair and reconditioning work must only be performed by properly trained personnel. Eye protection is obligatory for all operations on the movement. ETA SA disclaims liability for damage from non-compliance.</div>
+  </div>
+  <div class="spec-grid">
+    <div class="spec-card"><div class="sc-label">Calibre</div><div class="sc-val" style="font-size:18px;">2824-2</div><div class="sc-unit">11½''' · Ø 25.60 mm</div></div>
+    <div class="spec-card"><div class="sc-label">Jewels</div><div class="sc-val">25</div><div class="sc-unit">Ruby jewels</div></div>
+    <div class="spec-card"><div class="sc-label">Frequency</div><div class="sc-val">28,800</div><div class="sc-unit">A/h — 4 Hz</div></div>
+    <div class="spec-card"><div class="sc-label">Power Reserve</div><div class="sc-val">38</div><div class="sc-unit">Hours</div></div>
+    <div class="spec-card"><div class="sc-label">Lift Angle</div><div class="sc-val">50°</div><div class="sc-unit">Balance wheel</div></div>
+    <div class="spec-card"><div class="sc-label">Height</div><div class="sc-val">4.60</div><div class="sc-unit">mm on movement</div></div>
+  </div>
+  <div class="sdiv">Torque Specifications — Minimum Loosening Torque (ML)</div>
+  <div class="torque-block">
+    <div class="tb-head">Screw Groups</div>
+    <div class="torque-row"><div class="tr-label">Group (a) — Balance bridge, Train bridge, Barrel bridge, Pallet bridge<span class="tr-sub">Pos 5105, 5110, 5121, 5125 — and also 5445, 52595, 51141, 51497</span></div><div class="tr-val">1.2 Ncm <span class="tr-ml">ML</span></div></div>
+    <div class="torque-row"><div class="tr-label">Group (b) — Ratchet wheel, Crown wheel, Auto framework screws<span class="tr-sub">Pos 5415, 5420, 51134</span></div><div class="tr-val">1.6 Ncm <span class="tr-ml">ML</span></div></div>
+    <div class="torque-row"><div class="tr-label">Group (c) — Minute train bridge screw<span class="tr-sub">Pos 5462</span></div><div class="tr-val">0.8 Ncm <span class="tr-ml">ML</span></div></div>
+  </div>
+  <div class="sdiv">Lubricants Required</div>
+  <div class="info-row">
+    <div class="info-card"><div class="ic-head ich-amber">Lubricants (Official ETA Spec)</div>
+    <div class="ic-body">
+      <strong>Moebius 9010</strong> — Fine oil. All pivots, shock settings, escape wheel, pallet pivot.<br><br>
+      <strong>Moebius HP-1300</strong> or <strong>D5</strong> — Thick oil or grease. Barrel, barrel arbor upper, train, winding mechanism, keyless work, ball bearing, date corrector.<br><br>
+      <strong>Moebius 941</strong> or <strong>9415</strong> — Special oil for pallet stones. Impulse faces of pallet jewels only.<br><br>
+      <strong>Moebius 9501</strong> or <strong>Jismaa 124</strong> — Grease. Date jumper (Pos 2576) — 4-step procedure required.
+    </div></div>
+    <div class="info-card"><div class="ic-head ich-red">Key Bridges (Part Numbers)</div>
+    <div class="ic-body">
+      <strong>Pos 100</strong> 10.020.07 — Main plate (jewelled)<br>
+      <strong>Pos 105</strong> 10.041.00 — Barrel bridge<br>
+      <strong>Pos 110</strong> 10.048.07 — Train wheel bridge (jewelled)<br>
+      <strong>Pos 121/3</strong> 10.058.61 — Balance bridge (ETACHRON)<br>
+      <strong>Pos 125</strong> 10.057.07 — Pallet bridge (jewelled)<br>
+      <strong>Pos 1134</strong> 12.030.00 — Auto device framework<br>
+      <strong>Pos 1141</strong> 12.051.07 — Auto lower bridge (jewelled)<br>
+      <strong>Pos 462</strong> 10.062.00 — Minute train bridge
+    </div></div>
+  </div>
+</div>
+
+<!-- 01 PRE-SERVICE -->
+<div class="panel" id="p1">
+  <div class="ph"><div class="ph-tag">Step 01 · Disassembly</div><h1>Pre-Service Inspection</h1>
+    <p>Document the movement condition and record baseline performance before touching a single screw.</p></div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">1.1</div><div class="si-body"><div class="si-title">Run timing machine — record baseline</div><div class="si-detail">At 4 Hz (28,800 A/h) record rate, amplitude, beat error and positional variance in at least 4 positions before disassembly. This baseline confirms problems existed and verifies the service corrected them.</div><div class="si-tags"><span class="tag tag-tip">TIP — do this first</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">1.2</div><div class="si-body"><div class="si-title">Check amplitude — expect 270–310° dial up, fully wound</div><div class="si-detail">Below 250° in any position indicates dirty/dry pivots, worn escapement, or a weak mainspring (Pos 771). Note all positions.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">1.3</div><div class="si-body"><div class="si-title">Verify power reserve — approximately 38 hours</div><div class="si-detail">Fully wind and run down. Significantly shorter than 38 hours suggests a worn or broken mainspring (Pos 771 — Barrel spring NM).</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">1.4</div><div class="si-body"><div class="si-title">Check date change timing (if date model)</div><div class="si-detail">With hour hand centred on 12, the date change should occur within 30 seconds of 12 o'clock. Record result.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">1.5</div><div class="si-body"><div class="si-title">Release mainspring tension completely</div><div class="si-detail">Hold crown in winding position. Use pegwood to press the click (Pos 425) aside. Allow the crown wheel to spin down under controlled thumb pressure on the crown. Never release suddenly — snapped click springs result.</div><div class="si-tags"><span class="tag tag-crit">CRITICAL — do before any disassembly</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">1.6</div><div class="si-body"><div class="si-title">Photograph the movement — both sides</div><div class="si-detail">Clear photos of movement both sides, noting any damage, worn parts, or unusual settings. Reference during reassembly.</div><div class="si-tags"><span class="tag tag-tip">TIP</span></div></div></div>
+  </div>
+  <button class="mark-done-btn" onclick="markDone(this,'p1')">Mark Section Complete</button>
+</div>
+
+<!-- 02 CASE & HANDS -->
+<div class="panel" id="p2">
+  <div class="ph"><div class="ph-tag">Step 02 · Disassembly</div><h1>Case Opening & Hand Removal</h1></div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">2.1</div><div class="si-body"><div class="si-title">Open case back</div><div class="si-detail">Snap or unscrew using the correct tool. Inspect gasket condition — note whether it needs replacing. A new gasket must be fitted before the final water resistance test.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">2.2</div><div class="si-body"><div class="si-title">Remove seconds hand — lift straight up</div><div class="si-detail">The seconds hand seats on the 4th wheel arbor (Ø 0.7 mm, cylindrical). Lift straight and even — any rocking can bend or break the 4th wheel pivot. Use hand levers with dressed smooth edges, or a hand press. Place hand on a labelled tray.</div><div class="si-tags"><span class="tag tag-crit">Lift perfectly straight — 4th wheel pivot at risk</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">2.3</div><div class="si-body"><div class="si-title">Remove minute hand</div><div class="si-detail">Lever levers under the minute hand close to the cannon pinion. Lift smoothly and evenly. Minute hand bore: Ø 0.9 +0.6/−0.4 mm, cylindrical.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">2.4</div><div class="si-body"><div class="si-title">Remove hour hand</div><div class="si-detail">Hour hand bore: Ø 1.5 +0.4/−0.2 mm, 3% conicity. Lever gently upward without rocking. Place all hands in labelled protective tray.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">2.5</div><div class="si-body"><div class="si-title">Release and remove winding stem (Pos 401)</div><div class="si-detail">Pull crown to setting position (first click). Use a fine pin to depress the setting lever (Pos 443/1) through the stem release hole — the stem will pull free. Set stem and crown aside.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">2.6</div><div class="si-body"><div class="si-title">Extract movement from case</div><div class="si-detail">Push from the case back side. Never grip the balance or rotor. Use movement holder immediately. Check that the centre tube (Pos 161) stayed in the main plate.</div></div></div>
+  </div>
+  <button class="mark-done-btn" onclick="markDone(this,'p2')">Mark Section Complete</button>
+</div>
+
+<!-- 03 DIAL & KEYLESS -->
+<div class="panel" id="p3">
+  <div class="ph"><div class="ph-tag">Step 03 · Disassembly</div><h1>Dial Removal & Keyless Work</h1></div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">3.1</div><div class="si-body"><div class="si-title">Remove dial — release dial fasteners (Pos 144)</div><div class="si-detail">Two set screws on the movement edge (Pos 144 — Dial fastener). Do not bend the dial support feet (Pos 145) — they set the precise dial height above the movement.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">3.2</div><div class="si-body"><div class="si-title">Remove hour wheel (Pos 255/1) and cannon pinion (Pos 242)</div><div class="si-detail">Lift hour wheel straight off. Cannon pinion (Pos 242 — with driving wheel) is a friction fit on the centre arbor. Pull straight up. If loose, note for staking during reassembly.</div><div class="si-tags"><span class="tag tag-warn">Cannon pinion is friction fit only — do not over-force</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">3.3</div><div class="si-body"><div class="si-title">Flip movement — begin keyless work disassembly</div><div class="si-detail">Place movement dial-side down in movement holder. All keyless work is now accessible from this side.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">3.4</div><div class="si-body"><div class="si-title">Remove combined setting lever jumper (Pos 445/2) — Screw 5445 (1.2 Ncm)</div><div class="si-detail">One screw. The jumper is under slight spring tension — control it as the screw lifts free.</div><div class="si-tags"><span class="tag tag-warn">Spring tension — control lift</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">3.5</div><div class="si-body"><div class="si-title">Remove setting lever (Pos 443/1), yoke (Pos 435), setting wheel (Pos 450), minute wheel (Pos 260)</div><div class="si-detail">Remove in this order. The setting lever is an assembled unit. The yoke (Pos 435 — Kupplungstriebhebel) then lifts free. Setting wheel (Pos 450) and minute wheel (Pos 260) drop out.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">3.6</div><div class="si-body"><div class="si-title">Remove sliding pinion (Pos 407) and winding pinion (Pos 410)</div><div class="si-detail">Both should drop out freely now the setting lever has been removed.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">3.7</div><div class="si-body"><div class="si-title">Remove minute train bridge (Pos 462) — Screw 5462 (0.8 Ncm)</div><div class="si-detail">One screw (Pos 5462, group c — lowest torque in the movement at 0.8 Ncm). Remove bridge.</div></div></div>
+  </div>
+  <button class="mark-done-btn" onclick="markDone(this,'p3')">Mark Section Complete</button>
+</div>
+
+<!-- 04 AUTO MODULE -->
+<div class="panel" id="p4">
+  <div class="ph"><div class="ph-tag">Step 04 · Disassembly</div><h1>Automatic Module Removal</h1>
+    <p>The 2824-2's bidirectional automatic module must be removed before accessing the base movement.</p></div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">4.1</div><div class="si-body"><div class="si-title">Remove oscillating weight (Pos 1143/1) — Screw 51497 (1.2 Ncm)</div><div class="si-detail">Remove ball bearing screw (Pos 51497). Lift rotor straight off — it rests on the ball bearing (Pos 1497). Never set the rotor face down on the bearing surface.</div><div class="si-tags"><span class="tag tag-warn">Never rest rotor on its bearing face</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">4.2</div><div class="si-body"><div class="si-title">Remove ball bearing (Pos 1497)</div><div class="si-detail">If replacing, use appropriate puller. Inspect bearing for roughness, play, or pitting on the inner/outer races. The 2824-2 ball bearing (Kugellager) is a known service part — replace if any doubt.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">4.3</div><div class="si-body"><div class="si-title">Remove auto lower bridge (Pos 1141) — Screw 51141 (1.2 Ncm)</div><div class="si-detail">One screw (Pos 51141). The lower bridge is jewelled — note the reduction wheel upper pivot rides here.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">4.4</div><div class="si-body"><div class="si-title">Remove auto wheels in reverse order</div><div class="si-detail">Remove: Auxiliary reversing wheel (Pos 1530), Reversing wheel (Pos 1488 — Var), Ratchet driving wheel (Pos 1482), Reduction wheel (Pos 1481). Keep in labelled tray — these wheels are specific to the 2824-2 winding direction logic.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">4.5</div><div class="si-body"><div class="si-title">Remove automatic framework (Pos 1134) — Screws 51134 ×2 (1.6 Ncm)</div><div class="si-detail">Two screws (Pos 51134, group b — 1.6 Ncm). Lift the framework. The base movement is now fully exposed.</div></div></div>
+  </div>
+  <div class="callout"><strong>Variant note:</strong> Reversing wheel (Pos 1488) is marked "Var" — confirm the correct variant via ETA Online Shop (EOS) at eta.ch before ordering replacements.</div>
+  <button class="mark-done-btn" onclick="markDone(this,'p4')">Mark Section Complete</button>
+</div>
+
+<!-- 05 BALANCE & ESCAPEMENT -->
+<div class="panel" id="p5">
+  <div class="ph"><div class="ph-tag">Step 05 · Disassembly</div><h1>Balance & Escapement</h1>
+    <div class="ph-warn"><span class="wi">⚠</span><strong>Always balance first, pallet second.</strong> Removing the pallet fork before the balance allows the escape wheel to spin freely and can shatter a balance pivot instantly.</div></div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">5.1</div><div class="si-body"><div class="si-title">Remove balance bridge screw (Pos 5121) — 1.2 Ncm</div><div class="si-detail">One screw. Loosen but do not remove completely until the bridge has been worked free from its locating pins.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">5.2</div><div class="si-body"><div class="si-title">Lift balance bridge (Pos 121/3) — perfectly parallel to the plate</div><div class="si-detail">This is one of the highest-risk operations. The balance bridge must come off completely level — any tipping will snap the upper balance pivot in the shock absorber (Pos 3024). Use both hands if needed. One side should not rise before the other.</div><div class="si-tags"><span class="tag tag-crit">Most common cause of broken pivots — keep level</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">5.3</div><div class="si-body"><div class="si-title">Remove balance wheel (Pos 721)</div><div class="si-detail">Lift by the rim — never by the hairspring or collet. Place immediately in a covered container. The hairspring is adjusted with the ETACHRON system (Pos 303/2, two-piece regulator) — do not disturb the regulator pins.</div><div class="si-tags"><span class="tag tag-crit">Never touch the hairspring</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">5.4</div><div class="si-body"><div class="si-title">Inspect both shock absorbers (Pos 3024 top, Pos 3025 bottom)</div><div class="si-detail">Top shock absorber (Pos 3024 — shouldered, press-in, to balance bridge). Bottom (Pos 3025 — cylindrical, press-in, to main plate). Under 10× magnification: check chaton seating, endstone condition, no cracks. Replace if endstone is chipped or chaton is loose.</div><div class="si-tags"><span class="tag tag-tip">10× minimum magnification</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">5.5</div><div class="si-body"><div class="si-title">Remove pallet bridge (Pos 125) — Screws 5125 ×2 (1.2 Ncm)</div><div class="si-detail">Two screws (Pos 5125, group a). Lift straight up. Pallet bridge is jewelled — note pivot condition.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">5.6</div><div class="si-body"><div class="si-title">Remove pallet fork (Pos 710) using pegwood only</div><div class="si-detail">Use pegwood to tilt and lift the pallet fork. Never grip the pallet body with tweezers — the pallet jewels are shellac-bonded on many variants and the body is vulnerable to jaw marks. Do not allow the fork to roll over onto the pallet jewels.</div><div class="si-tags"><span class="tag tag-crit">Pegwood only — no tweezers on the pallet body</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">5.7</div><div class="si-body"><div class="si-title">Remove stop lever (Pos 9433)</div><div class="si-detail">The stop lever (Stopphebel) prevents the train running when the crown is in the setting position. Lift out and place in tray.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">5.8</div><div class="si-body"><div class="si-title">Inspect pallet jewels under 10×+</div><div class="si-detail">Check both jewels for: chipping on locking faces, deformation, uneven wear on impulse faces. Any chipping means replace the pallet fork (Pos 710). Note: the locking face is the critical surface — micro-chips cause severe rate errors.</div></div></div>
+  </div>
+  <button class="mark-done-btn" onclick="markDone(this,'p5')">Mark Section Complete</button>
+</div>
+
+<!-- 06 TRAIN & BARREL -->
+<div class="panel" id="p6">
+  <div class="ph"><div class="ph-tag">Step 06 · Disassembly</div><h1>Train Wheels & Barrel</h1></div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">6.1</div><div class="si-body"><div class="si-title">Remove train wheel bridge (Pos 110) — Screws 5110 ×2 (1.2 Ncm)</div><div class="si-detail">Two screws (Pos 5110, group a). Lift slowly and evenly — all three train pivots disengage simultaneously. Any tipping can bend a pivot.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">6.2</div><div class="si-body"><div class="si-title">Remove train wheels: escape wheel (705), second (227), third (210), intermediate (203)</div><div class="si-detail">Remove in order, wheel by wheel. Place each on a labelled component tray. Inspect escape wheel teeth for bent tips, damage, or flat spots.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">6.3</div><div class="si-body"><div class="si-title">Remove barrel bridge (Pos 105) — Screws 5105 ×3 (1.2 Ncm)</div><div class="si-detail">Three screws (Pos 5105, group a).</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">6.4</div><div class="si-body"><div class="si-title">Lift out barrel complete (Pos 180/1)</div><div class="si-detail">Check: barrel rotates freely? Any roughness in the barrel bearing indicates wear. Centre tube (Pos 161) stays in the main plate — it is the bearing surface for the cannon pinion.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">6.5</div><div class="si-body"><div class="si-title">Remove winding mechanism — click spring, click, ratchet wheel, crown wheel</div><div class="si-detail">Order: Click spring (Pos 430) → Click (Pos 425) → Ratchet wheel (Pos 415, Screw 5415 — 1.6 Ncm) → Crown wheel (Pos 420, Screw 5420 — 1.6 Ncm). <strong>Crown wheel screw may be left-hand thread — turn clockwise to loosen on LH variants.</strong></div><div class="si-tags"><span class="tag tag-crit">Crown wheel screw — may be LH thread</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">6.6</div><div class="si-body"><div class="si-title">Open barrel — inspect mainspring (Pos 771)</div><div class="si-detail">Use barrel opener. Remove drum (Pos 185), then the mainspring (Pos 771 — NM, non-magnetic). Check for: kinks, rust spots, fractures near the outer end, loss of curvature (set). A healthy spring coils with consistent curvature throughout. Replace if any doubt — mainspring failure after service is an embarrassment.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">6.7</div><div class="si-body"><div class="si-title">Remove barrel arbor (Pos 195) — inspect pivot</div><div class="si-detail">Barrel arbor (Pos 195 — Federwelle) slips from the main plate. Inspect pivot for wear. Check the main plate barrel arbor bore — should be snug with no wobble.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">6.8</div><div class="si-body"><div class="si-title">Remove date mechanism (if present)</div><div class="si-detail">Order: Date indicator driving wheel (Pos 2556) → Date indicator (Pos 2557/1) → Date jumper maintaining plate (Pos 2595/1, Screw 52595 — 1.2 Ncm) → Date jumper ×2 (Pos 2576) → Date corrector (Pos 2566) → Double corrector lever (Pos 2570).</div></div></div>
+  </div>
+  <button class="mark-done-btn" onclick="markDone(this,'p6')">Mark Section Complete</button>
+</div>
+
+<!-- 07 CLEANING -->
+<div class="panel" id="p7">
+  <div class="ph"><div class="ph-tag">Step 07 · Cleaning</div><h1>Ultrasonic Cleaning</h1>
+    <p>All parts must be thoroughly cleaned before reassembly. Old oil mixed with metal particles becomes an abrasive paste — the primary cause of accelerated wear between services.</p></div>
+  <div class="info-row">
+    <div class="info-card"><div class="ic-head ich-red">DO NOT Ultrasonically Clean</div><div class="ic-body">
+      — Balance wheel with hairspring (Pos 721)<br>
+      — Mainspring (Pos 771) — clean by hand<br>
+      — Any pallet fork if shellac-bonded jewels are suspected<br>
+      — Anything with rubber seals or cemented parts<br><br>
+      Clean these by hand with pegwood and IPA or petroleum ether.
+    </div></div>
+    <div class="info-card"><div class="ic-head ich-amber">Cleaning Sequence</div><div class="ic-body">
+      <strong>1.</strong> Pre-clean in petroleum ether (dissolve old grease/oil)<br>
+      <strong>2.</strong> Ultrasonic bath — watch cleaning fluid<br>
+      <strong>3.</strong> Ultrasonic rinse — clean fluid<br>
+      <strong>4.</strong> Dry in heated cabinet 40–50°C<br>
+      <strong>5.</strong> Inspect every part under magnification<br>
+      <strong>6.</strong> Peg out all jewel holes before reassembly
+    </div></div>
+  </div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">7.1</div><div class="si-body"><div class="si-title">Sort parts into cleaning baskets</div><div class="si-detail">Bridges separately (jewel damage from contact), wheels together, screws in separate mesh container. Label clearly — the 2824-2 has many similar-looking screws with different torque specs.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">7.2</div><div class="si-body"><div class="si-title">Handle pallet fork carefully — risk of shellac attack</div><div class="si-detail">If unsure whether pallet jewels are shellac-bonded, clean by hand with petroleum ether only. IPA dissolves shellac and the jewels will fall out. Peg clean the upper and lower pivot holes.</div><div class="si-tags"><span class="tag tag-warn">Shellac risk with IPA</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">7.3</div><div class="si-body"><div class="si-title">Peg out all jewel holes — do not skip this</div><div class="si-detail">After drying, use sharpened pegwood to clean each jewel hole in all bridges and the main plate. Insert and rotate — never scrape. Change the pegwood tip frequently — it quickly becomes contaminated. Clean endstones of shock settings individually. This step alone can recover 10–20° of amplitude.</div><div class="si-tags"><span class="tag tag-crit">Not optional — amplitude depends on this</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">7.4</div><div class="si-body"><div class="si-title">Inspect all pivots under 10×+</div><div class="si-detail">Check all wheel pivots: bending, scoring, pitting. Balance pivots (Pos 721) are most delicate — a bent balance pivot is cause for balance wheel replacement (Pos 721 is a complete timed and standardised assembly including stud). Escape wheel pivots are also fragile.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">7.5</div><div class="si-body"><div class="si-title">Inspect barrel drum interior</div><div class="si-detail">Barrel drum (Pos 185): fine scratches inside from a broken spring are normal and acceptable. Deep gouges are not — they catch the spring and prevent free unwinding. Clean inside with pegwood.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">7.6</div><div class="si-body"><div class="si-title">Clean balance wheel by hand</div><div class="si-detail">Hold balance by rim only. Gently wipe pivots with soft pith wood or clean chamois. Blow with a soft dry air bulb (never compressed air — it can disturb the hairspring coils permanently). Check the hairspring: every coil should be flat, evenly spaced, and perfectly concentric when the balance is at rest.</div></div></div>
+  </div>
+  <button class="mark-done-btn" onclick="markDone(this,'p7')">Mark Section Complete</button>
+</div>
+
+<!-- 08 BARREL -->
+<div class="panel" id="p8">
+  <div class="ph"><div class="ph-tag">Step 08 · Reassembly</div><h1>Barrel & Mainspring</h1></div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">8.1</div><div class="si-body"><div class="si-title">Apply HP-1300 / D5 to inside of barrel drum (Pos 185)</div><div class="si-detail">Thin smear on the inner wall using a pegwood stick or small brush. Too much grease loads the mainspring and reduces power reserve. Aim for a thin, even, just-visible film.</div><div class="si-tags"><span class="tag tag-lube">LUBE: HP-1300 / D5</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">8.2</div><div class="si-body"><div class="si-title">Wind mainspring (Pos 771) with mainspring winder</div><div class="si-detail">Always use a winder — never hand-fit a mainspring. Select correct arbor size. Ensure the outer end hook (bridle) engages the barrel cutout correctly before loading. The NM spring should coil smoothly with no kinks. Inner end attaches to the barrel arbor hook.</div><div class="si-tags"><span class="tag tag-crit">Always use a mainspring winder</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">8.3</div><div class="si-body"><div class="si-title">Close barrel drum with barrel press</div><div class="si-detail">Use a barrel press — never finger pressure. The drum lid must seat fully and evenly around the entire circumference. A partially closed barrel causes the lid to drag against the barrel bridge.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">8.4</div><div class="si-body"><div class="si-title">Oil barrel arbor pivots (Pos 195)</div><div class="si-detail">Lower pivot: <strong>Moebius 9010</strong> — applied to the main plate barrel arbor jewel. Upper pivot: <strong>HP-1300/D5</strong> — applied to the barrel bridge jewel hole. Pre-oil the upper now before the barrel goes in, so you do not need to revisit it.</div><div class="si-tags"><span class="tag tag-lube">LUBE: 9010 lower · HP-1300 upper</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">8.5</div><div class="si-body"><div class="si-title">Fit barrel complete (Pos 180/1) into main plate</div><div class="si-detail">Lower the barrel assembly into the main plate. Arbor seats in the main plate hole. The barrel should rotate freely. Check end shake — barrel end shake should be the greatest in the movement (decreasing through the train to the escape wheel).</div></div></div>
+  </div>
+  <button class="mark-done-btn" onclick="markDone(this,'p8')">Mark Section Complete</button>
+</div>
+
+<!-- 09 TRAIN -->
+<div class="panel" id="p9">
+  <div class="ph"><div class="ph-tag">Step 09 · Reassembly</div><h1>Train Wheel Assembly</h1>
+    <p>Oil upper pivots before the barrel bridge goes on — they become inaccessible afterwards.</p></div>
+  <div class="sdiv">Official ETA Assembly Order — Basic Movement</div>
+  <div class="asm-flow">
+    <div class="asm-node key">100 Main Plate</div><div class="asm-arrow">→</div>
+    <div class="asm-node">195 Barrel Arbor</div><div class="asm-arrow">→</div>
+    <div class="asm-node">180/1 Barrel</div><div class="asm-arrow">→</div>
+    <div class="asm-node">771 Mainspring</div><div class="asm-arrow">→</div>
+    <div class="asm-node">203 Intermediate</div><div class="asm-arrow">→</div>
+    <div class="asm-node">227 Second</div><div class="asm-arrow">→</div>
+    <div class="asm-node">210 Third</div><div class="asm-arrow">→</div>
+    <div class="asm-node key">105 Barrel Bridge</div><div class="asm-arrow">→</div>
+    <div class="asm-node">5105 ×3</div><div class="asm-arrow">→</div>
+    <div class="asm-node key">110 Train Bridge</div><div class="asm-arrow">→</div>
+    <div class="asm-node">5110 ×2</div><div class="asm-arrow">→</div>
+    <div class="asm-node">705 Escape Wheel</div><div class="asm-arrow">→</div>
+    <div class="asm-node">9433 Stop Lever</div>
+  </div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">9.1</div><div class="si-body"><div class="si-title">Pre-oil upper pivots of intermediate (203), second (227), third wheel (210)</div><div class="si-detail">Apply a single micro-dot of <strong>Moebius 9010</strong> to the top of each pivot before fitting the barrel bridge. These become inaccessible once the bridge is screwed down. Do this immediately after placing the wheels in the plate.</div><div class="si-tags"><span class="tag tag-lube">LUBE: 9010 — upper pivots before bridge goes on</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">9.2</div><div class="si-body"><div class="si-title">Fit barrel bridge (Pos 105) — Screws 5105 ×3 (1.2 Ncm)</div><div class="si-detail">Lower the barrel bridge over the barrel arbor. Three screws (group a). Check barrel rotates freely after tightening.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">9.3</div><div class="si-body"><div class="si-title">Lower train wheel bridge (Pos 110) slowly — all three pivots simultaneously</div><div class="si-detail">Lower bridge with all three train wheel pivots entering their jewels at the same time. Any resistance means a pivot is not seated — do NOT press down. Lift, reposition, try again. This is a skill that develops with practice.</div><div class="si-tags"><span class="tag tag-crit">Never force if resistance is felt</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">9.4</div><div class="si-body"><div class="si-title">Fit Screws 5110 ×2 (1.2 Ncm) — verify free rotation</div><div class="si-detail">Tighten both screws. All train wheels should spin freely under finger pressure with no binding. Check end shake on each wheel — each should have less end shake than the barrel, decreasing through the train.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">9.5</div><div class="si-body"><div class="si-title">Oil all lower pivot jewels via main plate (accessible from below)</div><div class="si-detail">Apply <strong>9010</strong> to every lower pivot jewel visible through the main plate: intermediate (Pos 203), second (Pos 227), third (Pos 210), and escape wheel (Pos 705). Use smallest oiler — apply just enough to form a complete oil ring around the jewel. An oil ring that extends past the jewel edge means too much was applied.</div><div class="si-tags"><span class="tag tag-lube">LUBE: 9010 — all lower pivot jewels</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">9.6</div><div class="si-body"><div class="si-title">Fit escape wheel (Pos 705)</div><div class="si-detail">Set the escape wheel pivot into the train bridge jewel. Apply <strong>9010</strong> to the lower escape wheel pivot via the main plate jewel. Also apply <strong>9010</strong> to the upper escape wheel pivot via the train bridge jewel.</div><div class="si-tags"><span class="tag tag-lube">LUBE: 9010 — escape wheel both pivots</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">9.7</div><div class="si-body"><div class="si-title">Apply HP-1300/D5 to barrel arbor upper pivot (barrel bridge jewel)</div><div class="si-detail">Apply a small dot of <strong>HP-1300 or D5</strong> to the barrel arbor upper pivot hole in the barrel bridge. This is a higher-load bearing than the train wheel pivots — fine oil is insufficient here.</div><div class="si-tags"><span class="tag tag-lube">LUBE: HP-1300 — barrel arbor upper pivot</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">9.8</div><div class="si-body"><div class="si-title">Fit stop lever (Pos 9433)</div><div class="si-detail">Fit the stop lever (Stopphebel) into its position on the train bridge. It should be free to deflect and spring back. Test with the stem: pulling the crown to setting position should engage the stop lever against the escape wheel (if it is a model with this feature).</div></div></div>
+  </div>
+  <button class="mark-done-btn" onclick="markDone(this,'p9')">Mark Section Complete</button>
+</div>
+
+<!-- 10 WINDING -->
+<div class="panel" id="p10">
+  <div class="ph"><div class="ph-tag">Step 10 · Reassembly</div><h1>Winding Mechanism</h1></div>
+  <div class="callout red"><strong>Crown wheel screw (Pos 5420) may be left-hand thread</strong> — tighten counter-clockwise on LH thread variants. Always check thread direction before applying torque.</div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">10.1</div><div class="si-body"><div class="si-title">Fit crown wheel (Pos 420) — Screw 5420 (1.6 Ncm)</div><div class="si-detail">Lower the crown wheel (Kronrad) into position. Apply correct screw direction. Tighten to 1.6 Ncm. Apply a light film of <strong>HP-1300/D5</strong> to the crown wheel teeth.</div><div class="si-tags"><span class="tag tag-lube">LUBE: HP-1300 — crown wheel teeth</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">10.2</div><div class="si-body"><div class="si-title">Fit ratchet wheel (Pos 415) — Screw 5415 (1.6 Ncm)</div><div class="si-detail">Place ratchet wheel (Sperrad). Tighten screw at 1.6 Ncm. Apply <strong>HP-1300/D5</strong> to the ratchet teeth. The click must engage cleanly on every tooth.</div><div class="si-tags"><span class="tag tag-lube">LUBE: HP-1300 — ratchet teeth</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">10.3</div><div class="si-body"><div class="si-title">Fit click (Pos 425) and click spring (Pos 430)</div><div class="si-detail">Fit click spring first, then click. The click spring must have sufficient tension to lock the click firmly under winding load. Apply a drop of <strong>HP-1300/D5</strong> at the click-to-ratchet contact point.</div><div class="si-tags"><span class="tag tag-warn">Verify click spring tension</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">10.4</div><div class="si-body"><div class="si-title">Test winding — 8–10 rotations</div><div class="si-detail">Wind through 8–10 full crown rotations. Click should engage positively on every tooth. No slipping. The train should not run while winding (stop lever holds it). Good solid winding feedback means the mechanism is correct.</div></div></div>
+  </div>
+  <button class="mark-done-btn" onclick="markDone(this,'p10')">Mark Section Complete</button>
+</div>
+
+<!-- 11 PALLET & BALANCE -->
+<div class="panel" id="p11">
+  <div class="ph"><div class="ph-tag">Step 11 · Reassembly</div><h1>Pallet Fork & Balance Wheel</h1>
+    <p>The most critical assembly sequence. Precision lubrication here defines the movement's performance for the next 5–7 years.</p></div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">11.1</div><div class="si-body"><div class="si-title">Oil pallet jewels with 941 or 9415 — impulse faces only</div><div class="si-detail">Use a fine oiler to apply a tiny, barely-visible film of <strong>Moebius 941 or 9415</strong> to the impulse face of each pallet jewel (entry and exit stones). The impulse face is the angled, sliding surface. The locking face (vertical surface) receives NO oil — oil on the locking face destroys the lock and ruins rate. One application per jewel. If you apply too much, re-clean and start over.</div><div class="si-tags"><span class="tag tag-lube">LUBE: 941 / 9415 — impulse face only</span><span class="tag tag-crit">Most critical lube point in the movement</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">11.2</div><div class="si-body"><div class="si-title">Fit pallet fork (Pos 710) with pegwood</div><div class="si-detail">Lower pallet fork with pegwood guidance — never grip the pallet body with tweezers. Pivot must seat in the main plate jewel. The fork should hang freely and rock left-right when the escape wheel is flicked with pegwood.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">11.3</div><div class="si-body"><div class="si-title">Fit pallet bridge (Pos 125) — Screws 5125 ×2 (1.2 Ncm) — oil upper pivot</div><div class="si-detail">Lower bridge over upper pallet pivot. Two screws at 1.2 Ncm. Apply micro-drop of <strong>9010</strong> to the pallet pivot via the jewel in the pallet bridge. Also apply <strong>9010</strong> to the lower pallet pivot jewel in the main plate (accessible from the bottom).</div><div class="si-tags"><span class="tag tag-lube">LUBE: 9010 — both pallet pivot jewels</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">11.4</div><div class="si-body"><div class="si-title">Test escapement before fitting balance</div><div class="si-detail">With a small amount of spring tension (hand-wind 2–3 turns), use pegwood to gently rock the pallet fork from guard pin to guard pin. Watch and listen: the escape wheel should advance exactly one tooth each time, with a crisp, even impulse. Any stuttering, catching, or uneven motion means the escapement needs attention before the balance goes in.</div><div class="si-tags"><span class="tag tag-tip">Do this test before fitting the balance</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">11.5</div><div class="si-body"><div class="si-title">Oil shock settings (Pos 3024 top, Pos 3025 bottom) — capillary technique</div><div class="si-detail"><strong>Top (Pos 3024 in balance bridge):</strong> With endstone in position, place a single drop of <strong>9010</strong> at the centre of the endstone. Hold a fine oiler just next to the chaton rim — capillary action draws oil into the gap between chaton and endstone. Do not reposition chaton once oiled — all oil moves.<br><strong>Bottom (Pos 3025 in main plate):</strong> Same procedure. Both shock settings must be done before the balance is fitted.</div><div class="si-tags"><span class="tag tag-lube">LUBE: 9010 — both shock endstones</span><span class="tag tag-crit">One attempt — repositioning chaton loses the oil</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">11.6</div><div class="si-body"><div class="si-title">Verify ETACHRON regulator (Pos 303/2) and stud support (Pos 375) are correctly set</div><div class="si-detail">The two-piece regulator (Rücker, Pos 303/2) and stud support ETACHRON (Pos 375) should be in their standard position on the balance bridge. Regulator pins should bracket the hairspring coil without touching it when centred. Regulator corrector (Pos 358) allows fine adjustment without removing the balance.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">11.7</div><div class="si-body"><div class="si-title">Fit balance wheel (Pos 721) — lower pivot into bottom shock jewel</div><div class="si-detail">Lower the balance by its rim into the main plate. The lower pivot enters the bottom shock absorber (Pos 3025). Do not touch the hairspring. Set down gently — no bouncing.</div><div class="si-tags"><span class="tag tag-crit">Never touch the hairspring</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">11.8</div><div class="si-body"><div class="si-title">Lower balance bridge (Pos 121/3) — perfectly level — Screw 5121 (1.2 Ncm)</div><div class="si-detail">This mirrors disassembly. The bridge must come down perfectly parallel. The upper balance pivot enters the top shock absorber (Pos 3024) straight — any tilting will snap the pivot. Keep both sides of the bridge at the same height as you lower it. One screw (Pos 5121, group a). Do not overtighten.</div><div class="si-tags"><span class="tag tag-crit">Keep bridge perfectly level — #1 cause of broken pivots</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">11.9</div><div class="si-body"><div class="si-title">Verify movement is running — check amplitude</div><div class="si-detail">Give the movement a small impulse by flicking the crown or the rotor ring. The balance should oscillate freely and maintain rhythm. Listen for even, consistent ticking. If the balance stops immediately: check hairspring is not trapped under the regulator, check shock setting oil has not spread onto the balance rim, check pallet jewel oil is not excessive.</div></div></div>
+  </div>
+  <button class="mark-done-btn" onclick="markDone(this,'p11')">Mark Section Complete</button>
+</div>
+
+<!-- 12 AUTO REBUILD -->
+<div class="panel" id="p12">
+  <div class="ph"><div class="ph-tag">Step 12 · Reassembly</div><h1>Automatic Module Rebuild</h1></div>
+  <div class="sdiv">ETA Assembly Order — Auto Mechanism</div>
+  <div class="asm-flow">
+    <div class="asm-node key">1134 Framework</div><div class="asm-arrow">→</div>
+    <div class="asm-node">51134 ×2</div><div class="asm-arrow">→</div>
+    <div class="asm-node">1481 Reduction</div><div class="asm-arrow">→</div>
+    <div class="asm-node">1482 Ratchet Driver</div><div class="asm-arrow">→</div>
+    <div class="asm-node">1488 Reversing</div><div class="asm-arrow">→</div>
+    <div class="asm-node">1530 Aux Reversing</div><div class="asm-arrow">→</div>
+    <div class="asm-node key">1141 Lower Bridge</div><div class="asm-arrow">→</div>
+    <div class="asm-node">51141</div><div class="asm-arrow">→</div>
+    <div class="asm-node">1497 Ball Bearing</div><div class="asm-arrow">→</div>
+    <div class="asm-node">51497</div><div class="asm-arrow">→</div>
+    <div class="asm-node key">1143/1 Rotor</div>
+  </div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">12.1</div><div class="si-body"><div class="si-title">Fit auto framework (Pos 1134) — Screws 51134 ×2 (1.6 Ncm)</div><div class="si-detail">Lower framework (Gestell für Automatik) onto the train bridge. Two screws at 1.6 Ncm. This is the deck on which all auto wheels ride.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">12.2</div><div class="si-body"><div class="si-title">Fit auto wheels in order — oil each pivot as fitted</div><div class="si-detail">Order: Reduction wheel (Pos 1481) → Ratchet driving wheel (Pos 1482) → Reversing wheel (Pos 1488, Var) → Auxiliary reversing wheel (Pos 1530). Apply a micro-drop of <strong>9010</strong> to each wheel pivot as it is placed.</div><div class="si-tags"><span class="tag tag-lube">LUBE: 9010 — each auto wheel pivot</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">12.3</div><div class="si-body"><div class="si-title">Fit auto lower bridge (Pos 1141) — Screw 51141 (1.2 Ncm)</div><div class="si-detail">Lower jewelled bridge over the auto wheel pivots. One screw. Check all wheels rotate freely. Spin the reduction wheel with a finger — it should turn both ways and click the ratchet in one direction only.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">12.4</div><div class="si-body"><div class="si-title">Fit ball bearing (Pos 1497) — Screw 51497 (1.2 Ncm) — oil outer race</div><div class="si-detail">Press ball bearing into position (should seat without force). One screw at 1.2 Ncm. Apply a thin film of <strong>HP-1300/D5</strong> around the outer race of the bearing where the rotor hub contacts it.</div><div class="si-tags"><span class="tag tag-lube">LUBE: HP-1300 — ball bearing outer race</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">12.5</div><div class="si-body"><div class="si-title">Fit oscillating weight (Pos 1143/1)</div><div class="si-detail">Lower the rotor onto the ball bearing — it should drop on under its own weight. Spin through 360°: must clear the movement and framework with no fouling. Should spin freely for several seconds when flicked.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">12.6</div><div class="si-body"><div class="si-title">Test bidirectional winding</div><div class="si-detail">Rotate rotor both clockwise and anticlockwise. Both directions should wind the mainspring (ratchet wheel advances in one direction only). No winding in one direction = failed reversing wheel (Pos 1488 or 1530). Check the variant number before ordering a replacement.</div></div></div>
+  </div>
+  <button class="mark-done-btn" onclick="markDone(this,'p12')">Mark Section Complete</button>
+</div>
+
+<!-- 13 CALENDAR -->
+<div class="panel" id="p13">
+  <div class="ph"><div class="ph-tag">Step 13 · Reassembly</div><h1>Calendar Mechanism</h1>
+    <p>The ETA date jumper lubrication requires a specific 4-step procedure from the official technical communication — do not skip or abbreviate it.</p></div>
+  <div class="sdiv">ETA Assembly Order — Calendar & Handsetting Side</div>
+  <div class="asm-flow">
+    <div class="asm-node key">100 Main Plate</div><div class="asm-arrow">→</div>
+    <div class="asm-node">407 Sliding Pinion</div><div class="asm-arrow">→</div>
+    <div class="asm-node">410 Winding Pinion</div><div class="asm-arrow">→</div>
+    <div class="asm-node">401 Stem</div><div class="asm-arrow">→</div>
+    <div class="asm-node">2570 Double Corrector Lever</div><div class="asm-arrow">→</div>
+    <div class="asm-node">443/1 Setting Lever</div><div class="asm-arrow">→</div>
+    <div class="asm-node">435 Yoke</div><div class="asm-arrow">→</div>
+    <div class="asm-node">445/2 Jumper</div><div class="asm-arrow">→</div>
+    <div class="asm-node">5445 ×1</div><div class="asm-arrow">→</div>
+    <div class="asm-node">242 Cannon Pinion</div><div class="asm-arrow">→</div>
+    <div class="asm-node">260 Minute Wheel</div><div class="asm-arrow">→</div>
+    <div class="asm-node">450 Setting Wheel</div><div class="asm-arrow">→</div>
+    <div class="asm-node">2556 Date Driver</div><div class="asm-arrow">→</div>
+    <div class="asm-node key">2557/1 Date Indicator</div><div class="asm-arrow">→</div>
+    <div class="asm-node">462 Min. Bridge</div><div class="asm-arrow">→</div>
+    <div class="asm-node">5462 ×1</div><div class="asm-arrow">→</div>
+    <div class="asm-node">2566 Date Corrector</div><div class="asm-arrow">→</div>
+    <div class="asm-node">2576 ×2 Date Jumper</div><div class="asm-arrow">→</div>
+    <div class="asm-node key">2595/1 Jumper Plate</div><div class="asm-arrow">→</div>
+    <div class="asm-node">52595 ×1</div><div class="asm-arrow">→</div>
+    <div class="asm-node">255/1 Hour Wheel</div><div class="asm-arrow">→</div>
+    <div class="asm-node">145 Dial Support</div>
+  </div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">13.1</div><div class="si-body"><div class="si-title">Date jumper lubrication — 4-step ETA procedure (Pos 2576)</div><div class="si-detail"><strong>Step 1:</strong> Lubricate Pos 2576 with <strong>Moebius 9501</strong> or <strong>Jismaa 124</strong>.<br><strong>Step 2:</strong> Rotate date indicator (Pos 2557/1) approximately 10 teeth using the quick-set corrector.<br><strong>Step 3:</strong> Lubricate Pos 2576 again with 9501/Jismaa 124.<br><strong>Step 4:</strong> Rotate Pos 2557/1 another 10 teeth with quick corrector.<br>This distributes grease evenly along the entire date jumper path — skipping this leaves unlubricated zones and causes the date to stick after several months.</div><div class="si-tags"><span class="tag tag-lube">LUBE: 9501 / Jismaa 124</span><span class="tag tag-crit">Must follow 4-step ETA procedure exactly</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">13.2</div><div class="si-body"><div class="si-title">Fit date indicator (Pos 2557/1)</div><div class="si-detail">Lower date disc onto main plate. Teeth must mesh with date indicator driving wheel (Pos 2556). Disc must sit flat and rotate freely — no tilting or catching.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">13.3</div><div class="si-body"><div class="si-title">Fit date jumper maintaining plate (Pos 2595/1) — Screw 52595 (1.2 Ncm)</div><div class="si-detail">One screw. Very small quantity of <strong>HP-1300/D5</strong> on the date corrector (Pos 2566) contact surface.</div><div class="si-tags"><span class="tag tag-lube">LUBE: HP-1300 — date corrector surface (very small qty)</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">13.4</div><div class="si-body"><div class="si-title">Fit minute train bridge (Pos 462) — Screw 5462 (0.8 Ncm)</div><div class="si-detail">One screw at 0.8 Ncm — the lowest torque specification in the movement. Do not overtighten. Apply <strong>HP-1300/D5</strong> to minute wheel (Pos 260) pivot visible through the bridge jewel.</div><div class="si-tags"><span class="tag tag-lube">LUBE: HP-1300 — minute wheel pivot</span><span class="tag tag-warn">0.8 Ncm only — lowest torque screw</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">13.5</div><div class="si-body"><div class="si-title">Verify date change timing</div><div class="si-detail">Run movement and advance hands slowly through midnight. The date change (disc snap) should complete quickly and cleanly. Slow or incomplete change indicates insufficient date jumper tension or a worn driving wheel tooth. If change takes more than 5 minutes of the hour-hand arc to complete, investigate before casing.</div></div></div>
+  </div>
+  <button class="mark-done-btn" onclick="markDone(this,'p13')">Mark Section Complete</button>
+</div>
+
+<!-- 14 KEYLESS & DIAL -->
+<div class="panel" id="p14">
+  <div class="ph"><div class="ph-tag">Step 14 · Reassembly</div><h1>Keyless Work & Dial Fitting</h1></div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">14.1</div><div class="si-body"><div class="si-title">Lubricate keyless work contact areas</div><div class="si-detail">Apply <strong>HP-1300/D5</strong> to: yoke (Pos 435) sliding surface, setting lever (Pos 443/1) pivot pin, sliding pinion (Pos 407) engagement surface. Apply <strong>9010</strong> to cannon pinion (Pos 242) arbor surface and the centre tube (Pos 161) bearing bore.</div><div class="si-tags"><span class="tag tag-lube">LUBE: HP-1300 — keyless work · 9010 — cannon pinion arbor</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">14.2</div><div class="si-body"><div class="si-title">Insert stem (Pos 401) — verify setting lever engagement</div><div class="si-detail">Depress the setting lever and insert the winding stem (Pos 401) until the notch aligns with the setting lever tooth. Release lever — it should spring back and lock the stem securely. The stem should not pull out without pressing the lever again.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">14.3</div><div class="si-body"><div class="si-title">Fit setting lever (Pos 443/1), yoke (Pos 435), combined jumper (Pos 445/2) — Screw 5445 (1.2 Ncm)</div><div class="si-detail">Fit in order. Jumper goes on under slight preload. One screw at 1.2 Ncm. Test: crown in winding position — sliding pinion engages winding pinion. Crown pulled to setting position — sliding pinion disengages, setting wheel (Pos 450) engages cannon pinion driving wheel.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">14.4</div><div class="si-body"><div class="si-title">Press cannon pinion (Pos 242) — verify friction</div><div class="si-detail">Press cannon pinion onto centre arbor — it must require noticeable resistance. Too easy: tighten with staking set (same stump and punch as for the seconds wheel pipe). Too tight: hands cannot be set, and the mechanism will be damaged. Correct tension: hands can be set by crown, but do not slip freely when crown is released.</div><div class="si-tags"><span class="tag tag-warn">Friction fit — must not be loose or excessively tight</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">14.5</div><div class="si-body"><div class="si-title">Fit hour wheel (Pos 255/1)</div><div class="si-detail">Lower hour wheel assembly over the cannon pinion pipe. Apply a micro-drop of <strong>9010</strong> to the hour wheel bore as it seats.</div><div class="si-tags"><span class="tag tag-lube">LUBE: 9010 — hour wheel bore</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">14.6</div><div class="si-body"><div class="si-title">Fit dial — tighten dial fasteners (Pos 144) gently</div><div class="si-detail">Lower dial onto dial supports (Pos 145). Tighten the two set screws (Pos 144) — snug only. These screws are delicate and the dial feet are fragile. The dial must sit flat with no rocking before the fasteners are tightened.</div><div class="si-tags"><span class="tag tag-warn">Dial fastener screws — snug only, do not overtighten</span></div></div></div>
+  </div>
+  <button class="mark-done-btn" onclick="markDone(this,'p14')">Mark Section Complete</button>
+</div>
+
+<!-- 15 LUBE REFERENCE -->
+<div class="panel" id="p15">
+  <div class="ph"><div class="ph-tag">Step 15 · Reference</div><h1>Complete Lubrication Reference</h1>
+    <p>All official lubrication points for the ETA 2824-2 per CT 2824-2 FDE 481688 (v11).</p></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+    <span class="lp lp-fine">9010</span><span style="font-size:12px;color:var(--muted);">Fine oil — pivots, shock settings</span>
+    <span class="lp lp-thick">HP-1300 / D5</span><span style="font-size:12px;color:var(--muted);">Thick oil/grease — barrel, train, keyless</span>
+    <span class="lp lp-pallet">941 / 9415</span><span style="font-size:12px;color:var(--muted);">Pallet stone oil</span>
+    <span class="lp lp-grease">9501 / Jismaa 124</span><span style="font-size:12px;color:var(--muted);">Calendar grease</span>
+  </div>
+  <table class="lube-table">
+    <thead><tr><th>Pos</th><th>Location</th><th>Lubricant</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>185</td><td>Barrel drum inner wall</td><td><span class="lp lp-thick">HP-1300 / D5</span></td><td>Thin smear only — excess reduces power reserve</td></tr>
+      <tr><td>771</td><td>Mainspring (NM)</td><td><span class="lp lp-thick">HP-1300 / D5</span></td><td>Re-grease outer coils if cleaned</td></tr>
+      <tr><td>195</td><td>Barrel arbor lower pivot</td><td><span class="lp lp-fine">9010</span></td><td>Via main plate jewel</td></tr>
+      <tr><td>195</td><td>Barrel arbor upper pivot</td><td><span class="lp lp-thick">HP-1300 / D5</span></td><td>Via barrel bridge jewel — higher load than train</td></tr>
+      <tr><td>203</td><td>Intermediate wheel — both pivots</td><td><span class="lp lp-fine">9010</span></td><td>Upper pre-oiled before bridge fits; lower via main plate jewel</td></tr>
+      <tr><td>210</td><td>Third wheel — both pivots</td><td><span class="lp lp-fine">9010</span></td><td>Upper pre-oiled before bridge fits; lower via main plate jewel</td></tr>
+      <tr><td>227</td><td>Second wheel — both pivots</td><td><span class="lp lp-fine">9010</span></td><td>Upper pre-oiled before bridge fits; lower via main plate jewel</td></tr>
+      <tr><td>705</td><td>Escape wheel — both pivots</td><td><span class="lp lp-fine">9010</span></td><td>Upper via train bridge jewel; lower via main plate jewel</td></tr>
+      <tr><td>710</td><td>Pallet jewels — impulse faces</td><td><span class="lp lp-pallet">941 / 9415</span></td><td>Film on impulse face ONLY — NOT on locking face</td></tr>
+      <tr><td>710</td><td>Pallet fork — both pivot jewels</td><td><span class="lp lp-fine">9010</span></td><td>Via pallet bridge jewel (upper) and main plate jewel (lower)</td></tr>
+      <tr><td>3024 / 3025</td><td>Balance shock endstones (top &amp; bottom)</td><td><span class="lp lp-fine">9010</span></td><td>Capillary method — oil endstone, draw into chaton gap</td></tr>
+      <tr><td>420</td><td>Crown wheel teeth</td><td><span class="lp lp-thick">HP-1300 / D5</span></td><td>Light film only</td></tr>
+      <tr><td>415 / 425</td><td>Ratchet wheel / click engagement</td><td><span class="lp lp-thick">HP-1300 / D5</span></td><td>At click contact point</td></tr>
+      <tr><td>435 / 407</td><td>Yoke, sliding pinion, setting lever</td><td><span class="lp lp-thick">HP-1300 / D5</span></td><td>All keyless work sliding/pivot surfaces</td></tr>
+      <tr><td>242</td><td>Cannon pinion arbor surface</td><td><span class="lp lp-fine">9010</span></td><td>Centre tube bore: D5 or 9010</td></tr>
+      <tr><td>260</td><td>Minute wheel pivot</td><td><span class="lp lp-thick">HP-1300 / D5</span></td><td>Via minute train bridge jewel</td></tr>
+      <tr><td>255/1</td><td>Hour wheel bore</td><td><span class="lp lp-fine">9010</span></td><td>Micro-drop as it seats on cannon pinion</td></tr>
+      <tr><td>2576</td><td>Date jumper (×2)</td><td><span class="lp lp-grease">9501 / Jismaa 124</span></td><td>4-step ETA procedure — see Step 13.1</td></tr>
+      <tr><td>2566</td><td>Date corrector contact surface</td><td><span class="lp lp-thick">HP-1300 / D5</span></td><td>Very small quantity only</td></tr>
+      <tr><td>1481–1530</td><td>All auto wheel pivots</td><td><span class="lp lp-fine">9010</span></td><td>Each pivot as fitted</td></tr>
+      <tr><td>1497</td><td>Ball bearing outer race</td><td><span class="lp lp-thick">HP-1300 / D5</span></td><td>Thin film where rotor hub contacts bearing</td></tr>
+    </tbody>
+  </table>
+  <button class="mark-done-btn" onclick="markDone(this,'p15')">Mark Section Complete</button>
+</div>
+
+<!-- 16 HAND FITTING -->
+<div class="panel" id="p16">
+  <div class="ph"><div class="ph-tag">Step 16 · Reference</div><h1>Hand Fitting Heights</h1>
+    <p>From official ETA drawings Z0091640 (with seconds) and Z0091641 (without seconds). All dimensions in mm. Select the row number matching your dial thickness.</p></div>
+  <div class="sdiv">Hand Bore Diameters</div>
+  <div class="spec-grid">
+    <div class="spec-card"><div class="sc-label">Hour hand bore</div><div class="sc-val" style="font-size:17px;">Ø 1.5 +0.4/−0.2</div><div class="sc-unit">mm · 3% conicity</div></div>
+    <div class="spec-card"><div class="sc-label">Minute hand bore</div><div class="sc-val" style="font-size:17px;">Ø 0.9 +0.6/−0.4</div><div class="sc-unit">mm · cylindrical</div></div>
+    <div class="spec-card"><div class="sc-label">Seconds hand bore</div><div class="sc-val" style="font-size:17px;">Ø 0.7</div><div class="sc-unit">mm · cylindrical</div></div>
+    <div class="spec-card"><div class="sc-label">Seconds wheel pin</div><div class="sc-val" style="font-size:17px;">Ø 0.25</div><div class="sc-unit">mm</div></div>
+    <div class="spec-card"><div class="sc-label">Centre tube (Pos 161)</div><div class="sc-val" style="font-size:14px;">Ø 0.256 +0.6/−0.4</div><div class="sc-unit">mm</div></div>
+  </div>
+  <div class="sdiv">With Seconds — Drawing Z0091640</div>
+  <div class="hf-wrap">
+    <table class="hf-table">
+      <thead><tr><th>Row</th><th>A Cannon Pinion</th><th>B Hour Wheel</th><th>C Sec. Wheel Pin</th><th>D Centre Tube</th><th>E Cannon Pinion †</th><th>F Hour Wheel †</th><th>G Sec. Wheel Pin †</th><th>H Dial Thickness</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>1.95</td><td>1.00</td><td>4.82</td><td>2.50</td><td>1.10</td><td>0.70</td><td>1.50</td><td>0.70</td></tr>
+        <tr class="hf-hl"><td>2 normal</td><td>2.20</td><td>1.25</td><td>5.07</td><td>2.50</td><td>1.35</td><td>0.95</td><td>1.75</td><td>0.95</td></tr>
+        <tr><td>3</td><td>2.45</td><td>1.50</td><td>5.32</td><td>2.50</td><td>1.60</td><td>1.20</td><td>2.00</td><td>1.20</td></tr>
+        <tr><td>4</td><td>2.70</td><td>1.75</td><td>5.57</td><td>2.50</td><td>1.85</td><td>1.45</td><td>2.25</td><td>1.45</td></tr>
+        <tr><td>5</td><td>2.95</td><td>2.00</td><td>5.82</td><td>2.50</td><td>2.10</td><td>1.70</td><td>2.50</td><td>1.70</td></tr>
+        <tr><td>6</td><td>3.20</td><td>2.25</td><td>6.07</td><td>2.50</td><td>2.35</td><td>1.95</td><td>2.75</td><td>1.95</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout"><strong>Row 2 normal is the standard selection.</strong> A–D = total length from movement back. E–G = height above dial seat. H = dial thickness for which that row is designed. The G value (seconds wheel pin above dial) must exceed the dial thickness to ensure the seconds hand clears.</div>
+  <div class="sdiv">Without Seconds — Drawing Z0091641</div>
+  <div class="hf-wrap">
+    <table class="hf-table">
+      <thead><tr><th>Row</th><th>A Cannon Pinion</th><th>B Hour Wheel</th><th>C Sec. Pin (fixed 4.17)</th><th>D Centre Tube</th><th>E Cannon Pinion †</th><th>F Hour Wheel †</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>1.95</td><td>1.00</td><td>4.17</td><td>2.50</td><td>1.10</td><td>0.70</td></tr>
+        <tr class="hf-hl"><td>2 normal</td><td>2.20</td><td>1.25</td><td>4.17</td><td>2.50</td><td>1.35</td><td>0.95</td></tr>
+        <tr><td>4</td><td>2.70</td><td>1.75</td><td>4.17</td><td>2.50</td><td>1.85</td><td>1.45</td></tr>
+        <tr><td>5</td><td>2.95</td><td>2.00</td><td>4.17</td><td>2.50</td><td>2.10</td><td>1.70</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="font-size:11px;color:var(--muted);margin-top:6px;">† = Height above dial seat</div>
+  <button class="mark-done-btn" onclick="markDone(this,'p16')">Mark Section Complete</button>
+</div>
+
+<!-- 17 FINAL QC -->
+<div class="panel" id="p17">
+  <div class="ph"><div class="ph-tag">Step 17 · Final Quality Control</div><h1>Final QC Checks</h1>
+    <p>Do not case the movement until every check passes. Document results.</p></div>
+  <div class="step-list">
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">17.1</div><div class="si-body"><div class="si-title">Amplitude — 270–310° dial up, fully wound</div><div class="si-detail">Check on timing machine. Below 250° in any position: investigate before casing. Note positional amplitude drop — dial up to dial down should not drop more than 25–30°.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">17.2</div><div class="si-body"><div class="si-title">Beat error ≤ 0.2 ms</div><div class="si-detail">Adjust using the ETACHRON regulator corrector (Pos 358) without removing the balance. Move the corrector in small increments and recheck. The 2824-2 ETACHRON is a two-piece system — both regulator pins pivot together.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">17.3</div><div class="si-body"><div class="si-title">Rate — ±10 seconds/day across all positions</div><div class="si-detail">Check dial up, crown up, crown left, crown down, crown down, dial down. Large positional variance (rate changing significantly between positions) indicates hairspring damage, out-of-poise balance, or worn escapement geometry. Non-COSC movement — aim for ±10 s/d as a minimum competent service result.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">17.4</div><div class="si-body"><div class="si-title">Power reserve — approximately 38 hours</div><div class="si-detail">Fully wind, run down, record actual figure. Under 32 hours suggests: mainspring not fully wound before test, new mainspring not yet run-in, or excessive barrel friction.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">17.5</div><div class="si-body"><div class="si-title">Inspect all oil rings under 10× magnification</div><div class="si-detail">Verify a complete, clean oil ring (meniscus) is visible at every jewel. An empty jewel hole means the oil was not applied — re-oil if accessible. An oil blob that has spread beyond the jewel edge means too much was applied — clean and re-oil.</div><div class="si-tags"><span class="tag tag-tip">10× minimum magnification required</span></div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">17.6</div><div class="si-body"><div class="si-title">Hand clearance — rotate through full 12 hours</div><div class="si-detail">Fit all hands. Rotate slowly through all 12 hours. No hand should contact any other hand, the dial surface, or the crystal at any position. Pay special attention at 12:00 when all hands are stacked, and at the seconds hand tip passing the minute markers.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">17.7</div><div class="si-body"><div class="si-title">Date change timing — within 30 seconds of 12</div><div class="si-detail">With hour hand centred precisely on 12, the date change (disc snap) should occur with the minute hand within 30 seconds of 12. If slow, check cannon pinion friction (Pos 242) and motion work mesh (Pos 260 minute wheel).</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">17.8</div><div class="si-body"><div class="si-title">Winding and setting functions</div><div class="si-detail">Wind 10 full rotations — no slipping. Pull to setting — hands set without resistance. Quick-set date operates without jumping or skipping teeth.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">17.9</div><div class="si-body"><div class="si-title">Rotor — bidirectional winding confirmed</div><div class="si-detail">Rotate rotor CW and CCW. Both directions wind the mainspring (ratchet wheel advances one direction only). Any slipping in one direction = failed reversing wheel.</div></div></div>
+    <div class="step-item" onclick="tick(this)"><div class="si-check"></div><div class="si-num">17.10</div><div class="si-body"><div class="si-title">Case the movement — fit new gaskets — water resistance test</div><div class="si-detail">Fit new case gaskets (crown gasket, case back gasket). Re-case. Perform water resistance test per ISO 22810 — wet overpressure test followed by condensation test. Document the test result and the pressure tested to. Sign and date your service record.</div></div></div>
+  </div>
+  <div class="callout green" style="margin-top:20px;"><strong>Service complete.</strong> A well-serviced ETA 2824-2 should perform reliably for 5–7 years before the next overhaul. Document: pre-service timing figures, post-service timing figures, lubricants used, all replaced parts with part numbers, and water resistance test result.</div>
+  <button class="mark-done-btn" onclick="markDone(this,'p17')">Mark Service Complete ✓</button>
+</div>
+
+</main>
+</div>
+
+<script>
+// Navigation
+function nav(el, id) {
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(id).classList.add('active');
+  if (window.innerWidth <= 800) document.querySelector('.sidebar').classList.remove('open');
+  document.querySelector('.main').scrollTop = 0;
+}
+
+// Step checkbox toggle
+function tick(el) {
+  el.classList.toggle('done');
+  el.querySelector('.si-check').textContent = el.classList.contains('done') ? '✓' : '';
+}
+
+// Section completion tracking
+const done = {};
+const TOTAL = 17;
+
+function markDone(btn, panelId) {
+  const isDone = done[panelId];
+  done[panelId] = !isDone;
+  btn.textContent = done[panelId] ? '✓ Complete' : 'Mark Section Complete';
+  btn.classList.toggle('done', done[panelId]);
+
+  // Update sidebar item
+  document.querySelectorAll('.sb-item').forEach(item => {
+    const oc = item.getAttribute('onclick') || '';
+    if (oc.includes(panelId)) {
+      item.classList.toggle('done', done[panelId]);
+      item.querySelector('.sb-check').textContent = done[panelId] ? '✓' : '';
+    }
+  });
+
+  updateProgress();
+}
+
+function updateProgress() {
+  const count = Object.values(done).filter(Boolean).length;
+  const pct = Math.round(count / TOTAL * 100);
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progPct').textContent = count + ' / ' + TOTAL + ' complete';
+}
+</script>
+</body>
+</html>
